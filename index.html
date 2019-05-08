@@ -2,41 +2,87 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>websocket</title>
+  <meta charset="UTF-8">
+  <title>websocket</title>
 </head>
+
 <body>
-    <input type="text" id="pl" />
-    <input type="button" value="发送" id="submit" />
-    <input type="button" value="关闭" id="close" />
+  <input type="text" id="pl" />
+  <input type="button" value="发送" id="submit" />
+  <input type="button" value="关闭" id="close" />
+  <button id='screenCapture'>截图</button>
+  <button id='launchQQ'>打开qq</button>
+  <img id='img' src='' />
 </body>
 <script type="text/javascript">
   // 很重要 必须写，判断浏览器是否支持websocket
-    var CreateWebSocket = (function () {
-        return function (urlValue) {
-            if (window.WebSocket) return new WebSocket(urlValue);
-            if (window.MozWebSocket) return new MozWebSocket(urlValue);
-            return false;
+  var CreateWebSocket = (function () {
+    return function (urlValue) {
+      if (window.WebSocket) return new WebSocket(urlValue);
+      if (window.MozWebSocket) return new MozWebSocket(urlValue);
+      return false;
+    }
+  })()
+  // 实例化websoscket websocket有两种协议ws(不加密)和wss(加密)
+  var webSocket = CreateWebSocket("ws://127.0.0.1:3000");
+  webSocket.onopen = function (evt) {
+    // 一旦连接成功，就发送第一条数据
+    webSocket.send("第一条数据")
+  }
+  webSocket.onmessage = function (evt) {
+    var data = evt.data
+    // 这是服务端返回的数据
+    if (data.length) {
+      if (data.length < 100) {
+        console.log("浏览器端接收到消息字符串=" + data)
+      } else {
+        console.log("浏览器端接收到消息字符串长度=" + data.length)
+        var imgBase64 = isImgData(data)
+        console.log('当前的数据是否图片: ' + imgBase64.length)
+        if (imgBase64) {
+          document.getElementById("img").src = imgBase64
         }
-    })()
-   // 实例化websoscket websocket有两种协议ws(不加密)和wss(加密)
-    var webSocket = CreateWebSocket("ws://127.0.0.1:3000");
-    webSocket.onopen = function (evt) {
-        // 一旦连接成功，就发送第一条数据
-         webSocket.send("第一条数据")
+
+      }
+    } else {
+      console.log("浏览器端接收到消息" + data)
+      console.table(data)
+
     }
-    webSocket.onmessage = function (evt) {
-        // 这是服务端返回的数据
-        console.log("服务端说" + evt.data)
+  }
+  // 关闭连接
+  webSocket.onclose = function (evt) {
+    console.log("Connection closed.")
+  }
+  // input事件发送数据
+  document.getElementById("submit").onclick = function () {
+    var str = document.getElementById("pl").value
+    webSocket.send(str)
+  }
+  document.getElementById("screenCapture").onclick = function () {
+    var str = document.getElementById("pl").value
+    webSocket.send('screenCapture')
+  }
+  document.getElementById("launchQQ").onclick = function () {
+    var str = document.getElementById("pl").value
+    webSocket.send('launchQQ')
+  }
+
+  function isImgData(str) {
+    if (typeof str == 'string') {
+      try {
+        var obj = JSON.parse(str);
+        console.log('转换成功：' + obj);
+        if (obj.hasOwnProperty('type') && obj.type === 'img') {
+          return obj.content;
+        }
+      } catch (e) {
+        console.log('error：' + str + '!!!' + e);
+        return false;
+      }
     }
-    // 关闭连接
-    webSocket.onclose = function (evt) {
-        console.log("Connection closed.")
-    }
-    // input事件发送数据
-    document.getElementById("submit").onclick = function () {
-        var str = document.getElementById("pl").value
-        webSocket.send(str)
-    }
+    console.log('It is not a string!')
+  }
 </script>
+
 </html>
